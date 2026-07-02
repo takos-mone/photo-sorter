@@ -1,0 +1,7 @@
+node_modules
+dist
+.DS_Store
+*.log
+tsconfig.tsbuildinfo
+# ローカル検証用に置いた写真（公開リポに含めない）
+public/testimg
