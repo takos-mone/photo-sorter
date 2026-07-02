@@ -6,15 +6,19 @@ import {
   canUndo,
   corrections,
   effectiveClusters,
+  extOf,
   filter,
   initError,
   personName,
   phase,
   photos,
+  photoTime,
   progress,
   removePhotos,
+  renumber,
   selectMode,
   selection,
+  setRenumber,
   sortBy,
   undo,
 } from "./state/store";
@@ -58,6 +62,54 @@ async function getOriginalFile(photoId: string, name: string): Promise<File | Bl
   throw new Error(`元ファイルが見つかりません: ${name}`);
 }
 
+/** 書き出し用エントリを作る。renumber が ON なら <baseName>_001.ext に連番リネーム、
+ * OFF なら元名のまま（同名衝突時は (2),(3)…）。並び順は現在の並び替え設定に従う。
+ */
+export function buildEntries(
+  photoIds: string[],
+  baseName: string,
+): Array<{ name: string; getFile: () => Promise<File | Blob> }> {
+  const byId = new Map(photos.value.map((p) => [p.id, p]));
+  const skip = corrections.value.skip;
+  const removed = corrections.value.removed;
+
+  // 有効な写真を集めて、現在の並び替え順に整列（連番の順序を一致させる）
+  const seen = new Set<string>();
+  const list = photoIds
+    .filter((id) => {
+      if (seen.has(id) || skip[id] || removed[id] || !byId.has(id)) return false;
+      seen.add(id);
+      return true;
+    })
+    .map((id) => byId.get(id)!);
+  list.sort((a, b) =>
+    sortBy.value === "date"
+      ? photoTime(a) - photoTime(b)
+      : a.name.localeCompare(b.name, "ja", { numeric: true }),
+  );
+
+  const width = Math.max(3, String(list.length).length);
+  const usedNames = new Set<string>();
+  return list.map((p, i) => {
+    let name: string;
+    if (renumber.value) {
+      name = `${baseName}_${String(i + 1).padStart(width, "0")}${extOf(p.name)}`;
+    } else {
+      name = p.name;
+      if (usedNames.has(name)) {
+        const dot = name.lastIndexOf(".");
+        const base = dot > 0 ? name.slice(0, dot) : name;
+        const ext = dot > 0 ? name.slice(dot) : "";
+        let k = 2;
+        while (usedNames.has(`${base} (${k})${ext}`)) k++;
+        name = `${base} (${k})${ext}`;
+      }
+      usedNames.add(name);
+    }
+    return { name, getFile: () => getOriginalFile(p.id, p.name) };
+  });
+}
+
 export function App() {
   const [reconnect, setReconnect] = useState<{ dirName: string | null } | null>(null);
   const [restored, setRestored] = useState(false);
@@ -87,27 +139,7 @@ export function App() {
   };
 
   const zipPhotos = async (photoIds: string[], zipName: string) => {
-    const byId = new Map(photos.value.map((p) => [p.id, p]));
-    const entries: ZipEntry[] = [];
-    const seen = new Set<string>();
-    const usedNames = new Set<string>();
-    for (const id of photoIds) {
-      const p = byId.get(id);
-      if (!p || seen.has(id) || corrections.value.skip[id]) continue;
-      seen.add(id);
-      // 同名ファイルの衝突を避ける（例: photo.jpg → photo (2).jpg）
-      let name = p.name;
-      if (usedNames.has(name)) {
-        const dot = name.lastIndexOf(".");
-        const base = dot > 0 ? name.slice(0, dot) : name;
-        const ext = dot > 0 ? name.slice(dot) : "";
-        let i = 2;
-        while (usedNames.has(`${base} (${i})${ext}`)) i++;
-        name = `${base} (${i})${ext}`;
-      }
-      usedNames.add(name);
-      entries.push({ name, getFile: () => getOriginalFile(id, p.name) });
-    }
+    const entries: ZipEntry[] = buildEntries(photoIds, zipName);
     if (!entries.length) {
       alert("対象の写真がありません");
       return;
@@ -136,13 +168,8 @@ export function App() {
       return;
     }
     const folders = new Map<string, Array<{ name: string; getFile: () => Promise<File | Blob> }>>();
-    const byId = new Map(photos.value.map((p) => [p.id, p]));
     for (const c of named) {
-      const files = c.photos
-        .filter((id) => !corrections.value.skip[id])
-        .map((id) => byId.get(id))
-        .filter((p): p is NonNullable<typeof p> => !!p)
-        .map((p) => ({ name: p.name, getFile: () => getOriginalFile(p.id, p.name) }));
+      const files = buildEntries(c.photos, personName(c.id));
       if (files.length) folders.set(personName(c.id), files);
     }
     setBusyMsg("📂 フォルダへ書き出し中…");
@@ -266,6 +293,18 @@ export function App() {
             <button class="btn primary" onClick={exportFolders}>
               📂 人ごとにフォルダ書き出し
             </button>
+            <label
+              class={"btn" + (renumber.value ? " primary" : "")}
+              style="cursor:pointer;display:inline-flex;align-items:center;gap:6px"
+              title="ONにすると書き出し時に「名前_001.jpg」の連番へリネームします"
+            >
+              <input
+                type="checkbox"
+                checked={renumber.value}
+                onChange={(e) => setRenumber((e.target as HTMLInputElement).checked)}
+              />
+              連番リネーム
+            </label>
             <button class="btn danger" onClick={resetAll}>
               最初から
             </button>

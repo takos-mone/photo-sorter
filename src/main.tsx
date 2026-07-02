@@ -10,8 +10,10 @@ if (import.meta.env.DEV || location.search.includes("__test")) {
     const { runPipeline } = await import("./pipeline/runner");
     const { startProject } = await import("./state/project");
     const stores = await import("./state/store");
+    const { buildEntries } = await import("./app");
     (window as unknown as Record<string, unknown>).__test = {
       stores,
+      buildEntries,
       async diagOrt() {
         const ort = await import("onnxruntime-web");
         const log: string[] = [];

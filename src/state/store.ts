@@ -41,6 +41,31 @@ export type SortBy = "name" | "date";
 export const sortBy = signal<SortBy>("name");
 export const hideSmallPeople = signal(false); // 1〜2枚の人を隠す
 
+/** 書き出し時に <名前>_001.jpg のように連番リネームするか（localStorageに永続化） */
+export const renumber = signal<boolean>(
+  (() => {
+    try {
+      return localStorage.getItem("ps_renumber") === "1";
+    } catch {
+      return false;
+    }
+  })(),
+);
+export function setRenumber(v: boolean): void {
+  renumber.value = v;
+  try {
+    localStorage.setItem("ps_renumber", v ? "1" : "0");
+  } catch {
+    /* ignore */
+  }
+}
+
+/** 拡張子（先頭ドット付き、小文字）。無ければ ".jpg" */
+export function extOf(name: string): string {
+  const i = name.lastIndexOf(".");
+  return i >= 0 ? name.slice(i).toLowerCase() : ".jpg";
+}
+
 /** 撮影日時（無ければ lastModified）でのソートキー */
 export function photoTime(p: PhotoRec): number {
   return p.takenAt ?? p.lastModified ?? 0;
