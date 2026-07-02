@@ -548,6 +548,100 @@ h1.logo .sub {
   pointer-events: none;
 }
 
+/* ---- 重複候補ビュー ---- */
+.dedup {
+  padding: 12px 20px 80px;
+}
+.dedup-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.dedup-head b {
+  font-family: "Anton";
+  letter-spacing: 0.05em;
+  font-size: 16px;
+}
+.dedup-head input[type="range"] {
+  vertical-align: middle;
+  margin: 0 6px;
+}
+.dupgroup {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 10px;
+  margin-bottom: 12px;
+  background: var(--panel);
+}
+.dupgroup-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.dupgroup-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.dupcard {
+  position: relative;
+  width: 180px;
+  border-radius: 10px;
+  overflow: hidden;
+  cursor: pointer;
+  border: 3px solid transparent;
+  background: #000;
+}
+.dupcard img {
+  width: 100%;
+  height: 135px;
+  object-fit: cover;
+  display: block;
+}
+.dupcard.keep {
+  border-color: var(--done);
+}
+.dupcard.del {
+  border-color: var(--danger);
+}
+.dupcard.del img {
+  opacity: 0.5;
+}
+.dupcard-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 8px;
+  background: var(--panel2);
+  gap: 6px;
+}
+.dupcard-name {
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.dupcard-badge {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 8px;
+  color: #10110a;
+}
+.dupcard.keep .dupcard-badge {
+  background: var(--done);
+}
+.dupcard.del .dupcard-badge {
+  background: var(--danger);
+  color: #fff;
+}
+
 /* ---- ブラウザ非対応 ---- */
 .gate {
   max-width: 560px;

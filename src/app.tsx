@@ -36,6 +36,7 @@ import { CategoryBar } from "./ui/CategoryBar";
 import { Grid, visiblePhotos } from "./ui/Grid";
 import { Lightbox } from "./ui/Lightbox";
 import { TagModal } from "./ui/TagModal";
+import { DedupView } from "./ui/DedupView";
 
 /** ドロップ取り込み時の File 参照（ハンドルなしでもZIP可能に） */
 const fileCache = new Map<string, File>();
@@ -89,11 +90,23 @@ export function App() {
     const byId = new Map(photos.value.map((p) => [p.id, p]));
     const entries: ZipEntry[] = [];
     const seen = new Set<string>();
+    const usedNames = new Set<string>();
     for (const id of photoIds) {
       const p = byId.get(id);
       if (!p || seen.has(id) || corrections.value.skip[id]) continue;
       seen.add(id);
-      entries.push({ name: p.name, getFile: () => getOriginalFile(id, p.name) });
+      // 同名ファイルの衝突を避ける（例: photo.jpg → photo (2).jpg）
+      let name = p.name;
+      if (usedNames.has(name)) {
+        const dot = name.lastIndexOf(".");
+        const base = dot > 0 ? name.slice(0, dot) : name;
+        const ext = dot > 0 ? name.slice(dot) : "";
+        let i = 2;
+        while (usedNames.has(`${base} (${i})${ext}`)) i++;
+        name = `${base} (${i})${ext}`;
+      }
+      usedNames.add(name);
+      entries.push({ name, getFile: () => getOriginalFile(id, p.name) });
     }
     if (!entries.length) {
       alert("対象の写真がありません");
@@ -309,7 +322,7 @@ export function App() {
           )}
           <PeoplePanel onZipPerson={zipPerson} />
           <CategoryBar />
-          <Grid />
+          {f.kind === "dup" ? <DedupView /> : <Grid />}
           <Lightbox />
           {selectMode.value && (
             <div class="actionbar">
