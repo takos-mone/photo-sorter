@@ -25,6 +25,23 @@ export function Ingest({ onFiles, reconnect }: Props) {
     }
   };
 
+  const pickFiles = async (e: Event) => {
+    const input = e.target as HTMLInputElement;
+    const picked = [...(input.files ?? [])].filter((f) => IMAGE_EXTS.test(f.name));
+    input.value = ""; // 同じ選択を再度できるように
+    if (!picked.length) return;
+    setBusy(true);
+    try {
+      await startProject(null);
+      onFiles(
+        picked.sort((a, b) => a.name.localeCompare(b.name, "ja", { numeric: true })),
+        null,
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const onDrop = async (e: DragEvent) => {
     e.preventDefault();
     setOver(false);
@@ -81,11 +98,27 @@ export function Ingest({ onFiles, reconnect }: Props) {
         onDragLeave={() => setOver(false)}
         onDrop={onDrop}
       >
-        <h2>写真フォルダを選択 / ここにドラッグ&ドロップ</h2>
-        <p class="hint">JPEG / PNG / WebP 対応。数百枚でもOK。</p>
-        <button class="btn primary" onClick={pickFolder} disabled={busy}>
-          📁 フォルダを選択
-        </button>
+        <h2>写真を選ぶ / ここにドラッグ&ドロップ</h2>
+        <p class="hint">JPEG / PNG / WebP / HEIC 対応。数百枚でもOK。</p>
+        <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+          <button class="btn primary" onClick={pickFolder} disabled={busy}>
+            📁 フォルダごと選択
+          </button>
+          <label class={"btn" + (busy ? " disabled" : "")} style="cursor:pointer">
+            🖼 写真ファイルを選択
+            <input
+              type="file"
+              multiple
+              accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.jpg,.jpeg,.png,.webp,.heic,.heif"
+              style="display:none"
+              disabled={busy}
+              onChange={pickFiles}
+            />
+          </label>
+        </div>
+        <p class="hint" style="margin-top:10px">
+          「フォルダごと選択」はフォルダを丸ごと。「写真ファイルを選択」は写真を直接複数選べます。
+        </p>
       </div>
       <div class="privacy">
         🔒 写真がPCの外に送信されることは一切ありません。

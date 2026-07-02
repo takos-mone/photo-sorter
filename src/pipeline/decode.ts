@@ -1,9 +1,16 @@
-/** 画像デコードと縮小。HEIC はメインスレッド側で heic.ts が事前変換する。 */
+/** 画像デコードと縮小。HEIC は heic2any で JPEG へ変換してからデコードする。 */
+import { heicToJpegBlob, isHeic } from "./heic";
 
 /** File → ImageBitmap（失敗時は null）。長辺 maxSide に縮小。 */
 export async function decodeFile(file: File, maxSide = 1600): Promise<ImageBitmap | null> {
   try {
-    const full = await createImageBitmap(file);
+    let src: Blob = file;
+    if (isHeic(file)) {
+      const jpeg = await heicToJpegBlob(file);
+      if (!jpeg) return null;
+      src = jpeg;
+    }
+    const full = await createImageBitmap(src);
     return shrink(full, maxSide);
   } catch {
     return null;

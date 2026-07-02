@@ -14,6 +14,7 @@ import {
 import { loadFaceCropUrls, loadThumbUrls, photoIdOf } from "../state/project";
 import { clusterFaces } from "../cluster/cluster";
 import { decodeFile } from "./decode";
+import { readTakenAt } from "./exif";
 
 let worker: Worker | null = null;
 let ready: Promise<void> | null = null;
@@ -95,10 +96,11 @@ export async function runPipeline(files: File[]): Promise<void> {
     progress.value = { done, total: files.length, msg: file.name };
 
     const id = photoIdOf(file);
+    const takenAt = await readTakenAt(file);
     const bitmap = await decodeFile(file);
     if (!bitmap) {
-      // デコード不能（HEIC等）: 未処理のまま記録して続行
-      await db.putPhoto({
+      // デコード不能: 未処理のまま記録して続行
+      const rec: PhotoRec = {
         id,
         name: file.name,
         size: file.size,
@@ -107,7 +109,10 @@ export async function runPipeline(files: File[]): Promise<void> {
         height: 0,
         dhash: null,
         processed: false,
-      });
+        takenAt,
+      };
+      await db.putPhoto(rec);
+      photos.value = [...photos.value.filter((p) => p.id !== id), rec];
       done++;
       continue;
     }
@@ -123,6 +128,7 @@ export async function runPipeline(files: File[]): Promise<void> {
         height: res.height,
         dhash: res.dhash,
         processed: true,
+        takenAt,
       };
       const faceRecs: FaceRec[] = res.faces.map((f, i) => ({
         id: `${id}#${i}`,

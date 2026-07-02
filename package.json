@@ -12,6 +12,7 @@
   "dependencies": {
     "@preact/signals": "^2.0.0",
     "fflate": "^0.8.2",
+    "heic2any": "^0.0.4",
     "idb": "^8.0.0",
     "onnxruntime-web": "^1.21.0",
     "preact": "^10.25.0"

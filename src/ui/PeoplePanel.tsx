@@ -6,6 +6,7 @@ import {
   effectiveClusters,
   faceCropUrls,
   filter,
+  hideSmallPeople,
   mergeSel,
   personName,
 } from "../state/store";
@@ -16,8 +17,10 @@ interface Props {
 
 export function PeoplePanel({ onZipPerson }: Props) {
   const [collapsed, setCollapsed] = useState(false);
-  const clusters = effectiveClusters.value;
-  if (!clusters.length) return null;
+  const allClusters = effectiveClusters.value;
+  if (!allClusters.length) return null;
+  const clusters = hideSmallPeople.value ? allClusters.filter((c) => c.count >= 3) : allClusters;
+  const smallCount = allClusters.length - allClusters.filter((c) => c.count >= 3).length;
 
   const labeled = clusters.filter((c) => corrections.value.peopleLabels[c.id]).length;
   const sel = mergeSel.value;
@@ -61,9 +64,22 @@ export function PeoplePanel({ onZipPerson }: Props) {
           名前を入力→その人の写真をまとめて管理。☑で同一人物を統合。名前済み {labeled}/
           {clusters.length}（クリックで開閉）
         </span>
+        {smallCount > 0 && (
+          <button
+            class={"btn" + (hideSmallPeople.value ? " primary" : "")}
+            style="margin-left:auto"
+            title="3枚未満の人の表示/非表示"
+            onClick={(e) => {
+              e.stopPropagation();
+              hideSmallPeople.value = !hideSmallPeople.value;
+            }}
+          >
+            {hideSmallPeople.value ? `1〜2枚の人を表示(+${smallCount})` : "1〜2枚の人を隠す"}
+          </button>
+        )}
         <button
           class="btn"
-          style="margin-left:auto"
+          style={smallCount > 0 ? "" : "margin-left:auto"}
           disabled={sel.size < 2}
           onClick={(e) => {
             e.stopPropagation();

@@ -13,6 +13,7 @@ import {
   thumbUrls,
 } from "./store";
 import { emptyCorrections } from "../types";
+import { clusterFaces } from "../cluster/cluster";
 
 export const IMAGE_EXTS = /\.(jpe?g|png|webp|bmp|tiff?|heic|heif)$/i;
 
@@ -70,6 +71,10 @@ export async function restoreProject(): Promise<{
   faces.value = fc;
   corrections.value = corr ?? emptyCorrections();
   initUndo();
+  // 保存済みの顔からクラスタを再計算（保存していないので毎回組み直す）
+  if (fc.length) {
+    clusters.value = clusterFaces(fc, meta.clusterParams ?? DEFAULT_CLUSTER_PARAMS);
+  }
   await loadThumbUrls(ph.map((p) => p.id));
   await loadFaceCropUrls(fc.map((f) => f.id));
 

@@ -11,6 +11,8 @@ export interface PhotoRec {
   dhash: [number, number] | null;
   /** パイプライン処理済みか（顔検出まで完了） */
   processed: boolean;
+  /** EXIF 撮影日時（epoch ms）。無ければ lastModified を使う。 */
+  takenAt: number | null;
 }
 
 /** 検出された顔1つ（IndexedDB `faces` ストアの1レコード） */
@@ -49,8 +51,12 @@ export interface Corrections {
   peopleLabels: Record<number, string>;
   /** 顔単位の付け替え: faceId → クラスタid（0=どこにも属さない） */
   faceOverrides: Record<string, number>;
-  /** 写真単位の手動タグ: photoId → ラベル名[] */
+  /** ユーザー定義カテゴリ（イベント名など。例: "夏合宿旅行"） */
+  categories: string[];
+  /** 写真ごとのカテゴリタグ: photoId → カテゴリ名[] */
   photoTags: Record<string, string[]>;
+  /** プロジェクトから除外した（削除した）写真 */
+  removed: Record<string, boolean>;
   /** 使わない写真 */
   skip: Record<string, boolean>;
 }
@@ -59,7 +65,9 @@ export const emptyCorrections = (): Corrections => ({
   mergeMap: {},
   peopleLabels: {},
   faceOverrides: {},
+  categories: [],
   photoTags: {},
+  removed: {},
   skip: {},
 });
 
@@ -82,7 +90,8 @@ export const DEFAULT_CLUSTER_PARAMS: ClusterParams = {
   thr: 0.4,
   mergeThr: 0.46,
   minScore: 0.6,
-  minPhotos: 3,
+  // 1 にして検出された人は全員ピープルに出す（小グループは UI 側トグルで隠す）
+  minPhotos: 1,
 };
 
 /** パイプラインworkerへの要求 */

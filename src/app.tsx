@@ -1,6 +1,7 @@
 /** アプリ本体: ヘッダー/フィルタ/進捗/ピープル/グリッド/ライトボックス/エクスポート。 */
 import { useEffect, useState } from "preact/hooks";
 import {
+  autoAssignPhotos,
   backend,
   canUndo,
   corrections,
@@ -11,8 +12,10 @@ import {
   phase,
   photos,
   progress,
+  removePhotos,
   selectMode,
   selection,
+  sortBy,
   undo,
 } from "./state/store";
 import * as db from "./state/db";
@@ -29,8 +32,10 @@ import { writeBack } from "./export/writeback";
 import { BrowserGate } from "./ui/BrowserGate";
 import { Ingest } from "./ui/Ingest";
 import { PeoplePanel } from "./ui/PeoplePanel";
+import { CategoryBar } from "./ui/CategoryBar";
 import { Grid, visiblePhotos } from "./ui/Grid";
 import { Lightbox } from "./ui/Lightbox";
+import { TagModal } from "./ui/TagModal";
 
 /** ドロップ取り込み時の File 参照（ハンドルなしでもZIP可能に） */
 const fileCache = new Map<string, File>();
@@ -56,6 +61,7 @@ export function App() {
   const [reconnect, setReconnect] = useState<{ dirName: string | null } | null>(null);
   const [restored, setRestored] = useState(false);
   const [busyMsg, setBusyMsg] = useState("");
+  const [tagModal, setTagModal] = useState(false);
 
   useEffect(() => {
     void (async () => {
@@ -146,6 +152,28 @@ export function App() {
     location.reload();
   };
 
+  // ---- 複数選択アクション ----
+  const deleteSelected = () => {
+    const ids = [...selection.value];
+    if (!ids.length) return;
+    if (!confirm(`選択した ${ids.length} 枚をプロジェクトから削除しますか？（元の写真ファイルは消えません。元に戻すで復活できます）`))
+      return;
+    removePhotos(ids);
+    selection.value = new Set();
+  };
+
+  const autoAssignSelected = () => {
+    const ids = [...selection.value];
+    if (!ids.length) return;
+    const named = effectiveClusters.value.filter((c) => corrections.value.peopleLabels[c.id]).length;
+    if (!named) {
+      setBusyMsg("⚠️ 先にピープルで人に名前を付けてください（その名前のカテゴリへ振り分けます）");
+      return;
+    }
+    const { tagged, skipped } = autoAssignPhotos(ids);
+    setBusyMsg(`✅ 自動振り分け: ${tagged}枚に人名カテゴリを付与${skipped ? `／${skipped}枚は名前付きの人が写っておらずスキップ` : ""}`);
+  };
+
   // Cmd/Ctrl+Z で Undo
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -194,6 +222,22 @@ export function App() {
                 </button>
               ))}
             </div>
+            <div class="seg" title="並び替え">
+              {(
+                [
+                  ["name", "名前順"],
+                  ["date", "撮影日時順"],
+                ] as const
+              ).map(([k, label]) => (
+                <button
+                  key={k}
+                  class={sortBy.value === k ? "on" : ""}
+                  onClick={() => (sortBy.value = k)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
             <button class="btn" disabled={!canUndo.value} onClick={undo}>
               ↶ 元に戻す
             </button>
@@ -204,7 +248,7 @@ export function App() {
                 if (!selectMode.value) selection.value = new Set();
               }}
             >
-              {selectMode.value ? "✓ 選択中（写真をクリック）" : "⬇️ 写真を選んでZIP"}
+              {selectMode.value ? "✓ 選択中（写真をクリック）" : "☑ 写真を複数選択"}
             </button>
             <button class="btn primary" onClick={exportFolders}>
               📂 人ごとにフォルダ書き出し
@@ -214,6 +258,9 @@ export function App() {
             </button>
             {f.kind === "person" && (
               <span class="hint">表示中: {personName(f.root)} — もう一度👁で解除</span>
+            )}
+            {f.kind === "category" && (
+              <span class="hint">表示中: カテゴリ「{f.name}」</span>
             )}
           </div>
         )}
@@ -261,6 +308,7 @@ export function App() {
             </div>
           )}
           <PeoplePanel onZipPerson={zipPerson} />
+          <CategoryBar />
           <Grid />
           <Lightbox />
           {selectMode.value && (
@@ -280,8 +328,26 @@ export function App() {
               <button class="btn" onClick={() => (selection.value = new Set())}>
                 選択クリア
               </button>
-              <button class="btn primary" onClick={zipSelection}>
-                ⬇️ ZIPでダウンロード
+              <span style="width:1px;height:24px;background:var(--line)" />
+              <button
+                class="btn"
+                disabled={!selection.value.size}
+                onClick={() => setTagModal(true)}
+              >
+                🏷 タグ付け
+              </button>
+              <button
+                class="btn"
+                disabled={!selection.value.size}
+                onClick={autoAssignSelected}
+              >
+                ✨ 自動振り分け
+              </button>
+              <button class="btn primary" disabled={!selection.value.size} onClick={zipSelection}>
+                ⬇️ ZIP
+              </button>
+              <button class="btn danger" disabled={!selection.value.size} onClick={deleteSelected}>
+                🗑 削除
               </button>
               <button
                 class="btn"
@@ -294,6 +360,9 @@ export function App() {
                 選択モード終了
               </button>
             </div>
+          )}
+          {tagModal && (
+            <TagModal photoIds={[...selection.value]} onClose={() => setTagModal(false)} />
           )}
         </>
       )}

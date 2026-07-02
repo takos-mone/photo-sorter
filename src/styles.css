@@ -479,6 +479,75 @@ h1.logo .sub {
   border-radius: 12px;
 }
 
+/* ---- カテゴリバー ---- */
+.catbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 10px 20px 0;
+}
+.catlabel {
+  font-family: "Anton";
+  letter-spacing: 0.05em;
+  font-size: 14px;
+  color: var(--mut);
+}
+.catchip {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  overflow: hidden;
+  background: var(--panel);
+}
+.catchip.on {
+  border-color: var(--accent);
+}
+.catchip-name {
+  background: transparent;
+  border: 0;
+  color: var(--ink);
+  padding: 6px 10px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+}
+.catchip.on .catchip-name {
+  color: var(--accent);
+}
+.catchip-name b {
+  color: var(--mut);
+  margin-left: 4px;
+}
+.catchip-x {
+  background: transparent;
+  border: 0;
+  border-left: 1px solid var(--line);
+  color: var(--mut);
+  padding: 6px 8px;
+  cursor: pointer;
+  font-size: 12px;
+}
+.catchip-x:hover {
+  color: var(--danger);
+}
+.catinput {
+  min-width: 220px;
+}
+.tag.cat {
+  background: #7c5cff;
+  color: #fff;
+}
+.btn.partial {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.btn.disabled {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
 /* ---- ブラウザ非対応 ---- */
 .gate {
   max-width: 560px;
