@@ -84,6 +84,8 @@ export interface ClusterParams {
   mergeThr: number; // セントロイド統合しきい値
   minScore: number; // 顔検出スコア下限
   minPhotos: number; // クラスタ採用の最小写真数
+  /** クラスタリングに使う顔の最小幅（画像幅比）。極小顔は埋め込みが不安定なため除外する。省略時 0。 */
+  minBoxW?: number;
 }
 
 export const DEFAULT_CLUSTER_PARAMS: ClusterParams = {
@@ -96,7 +98,16 @@ export const DEFAULT_CLUSTER_PARAMS: ClusterParams = {
 
 /** パイプラインworkerへの要求 */
 export type WorkerRequest =
-  | { type: "INIT"; baseUrl: string }
+  | {
+      type: "INIT";
+      baseUrl: string;
+      /** エディション別のモデル構成（src/config/edition.ts の modelConfig() が生成） */
+      models: {
+        detector: "scrfd" | "yunet";
+        detectorUrl: string;
+        embedderUrl: string;
+      };
+    }
   | {
       type: "PROCESS";
       photoId: string;

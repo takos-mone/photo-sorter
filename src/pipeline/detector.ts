@@ -15,7 +15,12 @@ export interface Detection {
   kps: Array<[number, number]>;
 }
 
-export class Detector {
+/** 検出器の共通インターフェース（SCRFD / YuNet を差し替え可能に） */
+export interface FaceDetector {
+  detect(bitmap: ImageBitmap, scoreThr?: number, nmsThr?: number): Promise<Detection[]>;
+}
+
+export class Detector implements FaceDetector {
   private session: ort.InferenceSession;
 
   private constructor(session: ort.InferenceSession) {
@@ -96,7 +101,7 @@ export class Detector {
   }
 }
 
-function nms(dets: Detection[], thr: number): Detection[] {
+export function nms(dets: Detection[], thr: number): Detection[] {
   const sorted = [...dets].sort((a, b) => b.score - a.score);
   const keep: Detection[] = [];
   for (const d of sorted) {

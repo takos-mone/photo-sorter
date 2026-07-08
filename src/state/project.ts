@@ -1,6 +1,6 @@
 /** プロジェクトの開始・再開・フォルダ権限の再取得フロー。 */
 import type { PhotoRec } from "../types";
-import { DEFAULT_CLUSTER_PARAMS } from "../types";
+import { EDITION_CLUSTER_PARAMS } from "../config/edition";
 import * as db from "./db";
 import {
   clusters,
@@ -49,7 +49,7 @@ export async function startProject(dir: FileSystemDirectoryHandle | null): Promi
     id: "current",
     dirName: dir?.name ?? null,
     createdAt: Date.now(),
-    clusterParams: DEFAULT_CLUSTER_PARAMS,
+    clusterParams: EDITION_CLUSTER_PARAMS,
   });
 }
 
@@ -73,7 +73,7 @@ export async function restoreProject(): Promise<{
   initUndo();
   // 保存済みの顔からクラスタを再計算（保存していないので毎回組み直す）
   if (fc.length) {
-    clusters.value = clusterFaces(fc, meta.clusterParams ?? DEFAULT_CLUSTER_PARAMS);
+    clusters.value = clusterFaces(fc, meta.clusterParams ?? EDITION_CLUSTER_PARAMS);
   }
   await loadThumbUrls(ph.map((p) => p.id));
   await loadFaceCropUrls(fc.map((f) => f.id));

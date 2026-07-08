@@ -1,6 +1,7 @@
 /** メインスレッド側のパイプライン制御。File→bitmap化→workerへ逐次投入→結果をDBへ永続化。 */
 import type { FaceRec, PhotoRec, WorkerResponse } from "../types";
 import { DEFAULT_CLUSTER_PARAMS } from "../types";
+import { modelConfig } from "../config/edition";
 import * as db from "../state/db";
 import {
   backend,
@@ -43,7 +44,11 @@ function ensureWorker(): Worker {
     // worker 内の未捕捉エラー（import失敗など）も拾う
     w.onerror = (e) => fail(`worker error: ${e.message || e.filename || "unknown"}`);
     w.onmessageerror = () => fail("worker message error");
-    w.postMessage({ type: "INIT", baseUrl: import.meta.env.BASE_URL });
+    w.postMessage({
+      type: "INIT",
+      baseUrl: import.meta.env.BASE_URL,
+      models: modelConfig(import.meta.env.BASE_URL),
+    });
   });
   return worker;
 }

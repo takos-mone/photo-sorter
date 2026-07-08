@@ -2,12 +2,13 @@
 import * as ort from "onnxruntime-web";
 import type { WorkerRequest, WorkerResponse } from "../types";
 import { cropFace, makeThumb } from "./decode";
-import { Detector } from "./detector";
+import { Detector, type FaceDetector } from "./detector";
+import { YuNetDetector } from "./yunet";
 import { ArcFaceEmbedder } from "./embedder";
 import { dhashOf } from "./dhash";
 import { warpFace } from "./align";
 
-let detector: Detector | null = null;
+let detector: FaceDetector | null = null;
 let embedder: ArcFaceEmbedder | null = null;
 
 function post(msg: WorkerResponse, transfer: Transferable[] = []): void {
@@ -26,7 +27,18 @@ self.addEventListener("unhandledrejection", (e) => {
   post({ type: "INIT_ERROR", message: `unhandledrejection: ${String((e as PromiseRejectionEvent).reason)}` });
 });
 
-async function init(baseUrl: string): Promise<void> {
+type Models = Extract<WorkerRequest, { type: "INIT" }>["models"];
+
+async function loadBackends(models: Models, eps: string[]): Promise<void> {
+  detector =
+    models.detector === "yunet"
+      ? await YuNetDetector.load(models.detectorUrl, eps)
+      : await Detector.load(models.detectorUrl, eps);
+  // EdgeFace は ArcFace と同一の前処理（112x112 / (x-127.5)/127.5 / RGB）なので同じ実装を使う
+  embedder = await ArcFaceEmbedder.load(models.embedderUrl, eps);
+}
+
+async function init(baseUrl: string, models: Models): Promise<void> {
   // wasm/グルーmjs は public/ort/ に配置し、静的URLとして読み込む
   ort.env.wasm.wasmPaths = `${baseUrl}ort/`;
   ort.env.wasm.numThreads = 1; // GitHub Pages は COOP/COEP 不可 → SAB無し
@@ -51,14 +63,12 @@ async function init(baseUrl: string): Promise<void> {
   }
 
   try {
-    detector = await Detector.load(`${baseUrl}models/det_500m.onnx`, eps);
-    embedder = await ArcFaceEmbedder.load(`${baseUrl}models/w600k_mbf.onnx`, eps);
+    await loadBackends(models, eps);
     post({ type: "READY", backend });
   } catch (e) {
     // WebGPU 初期化失敗時は wasm で再試行
     if (backend === "webgpu") {
-      detector = await Detector.load(`${baseUrl}models/det_500m.onnx`, ["wasm"]);
-      embedder = await ArcFaceEmbedder.load(`${baseUrl}models/w600k_mbf.onnx`, ["wasm"]);
+      await loadBackends(models, ["wasm"]);
       post({ type: "READY", backend: "wasm" });
     } else {
       post({ type: "INIT_ERROR", message: String(e) });
@@ -115,6 +125,6 @@ async function process(photoId: string, bitmap: ImageBitmap): Promise<void> {
 
 self.onmessage = (ev: MessageEvent<WorkerRequest>) => {
   const msg = ev.data;
-  if (msg.type === "INIT") void init(msg.baseUrl);
+  if (msg.type === "INIT") void init(msg.baseUrl, msg.models);
   else if (msg.type === "PROCESS") void process(msg.photoId, msg.bitmap);
 };

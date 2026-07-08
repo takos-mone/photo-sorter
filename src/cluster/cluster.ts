@@ -19,7 +19,9 @@ function meanNormalized(embs: Float32Array[]): Float32Array {
 
 export function clusterFaces(faces: FaceRec[], params: ClusterParams): Cluster[] {
   // スコア降順（信頼できる顔から核を作る — face_sort.py と同じ）
-  const usable = faces.filter((f) => f.score >= params.minScore);
+  // 極小顔（minBoxW 未満）は埋め込みが不安定で誤ったクラスタ癒着を起こすため除外
+  const minW = params.minBoxW ?? 0;
+  const usable = faces.filter((f) => f.score >= params.minScore && f.box[2] >= minW);
   const sorted = [...usable].sort((a, b) => b.score - a.score);
 
   // 1) 貪欲割当
