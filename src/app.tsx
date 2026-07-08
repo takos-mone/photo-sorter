@@ -41,6 +41,12 @@ import { Grid, visiblePhotos } from "./ui/Grid";
 import { Lightbox } from "./ui/Lightbox";
 import { TagModal } from "./ui/TagModal";
 import { DedupView } from "./ui/DedupView";
+import { Landing } from "./ui/Landing";
+import { ProModal } from "./ui/ProModal";
+import { ReviewQueue } from "./ui/ReviewQueue";
+import { FEATURES, FREE_PHOTO_LIMIT } from "./config/edition";
+import { MONETIZE, hasDonation } from "./config/monetize";
+import { isPro } from "./state/license";
 
 /** ドロップ取り込み時の File 参照（ハンドルなしでもZIP可能に） */
 const fileCache = new Map<string, File>();
@@ -115,6 +121,8 @@ export function App() {
   const [restored, setRestored] = useState(false);
   const [busyMsg, setBusyMsg] = useState("");
   const [tagModal, setTagModal] = useState(false);
+  const [proModal, setProModal] = useState(false);
+  const [reviewQueue, setReviewQueue] = useState(false);
 
   useEffect(() => {
     void (async () => {
@@ -125,6 +133,13 @@ export function App() {
   }, []);
 
   const ingest = async (files: File[], _dir: FileSystemDirectoryHandle | null) => {
+    // 商用版の無料枠: 上限を超えた分は取り込まない（Proで無制限）
+    if (FEATURES.proGating && !isPro.value && files.length > FREE_PHOTO_LIMIT) {
+      alert(
+        `無料版では1プロジェクト ${FREE_PHOTO_LIMIT} 枚までです。先頭 ${FREE_PHOTO_LIMIT} 枚を取り込みます。\nPro版なら無制限で使えます（ツールバーの ⭐Pro から）。`,
+      );
+      files = files.slice(0, FREE_PHOTO_LIMIT);
+    }
     for (const f of files) fileCache.set(photoIdOf(f), f);
     await runPipeline(files);
   };
@@ -308,6 +323,34 @@ export function App() {
             <button class="btn danger" onClick={resetAll}>
               最初から
             </button>
+            {FEATURES.proGating && (
+              <button
+                class="btn"
+                title="似ている顔をY/Nで高速確認（Pro）"
+                onClick={() => (isPro.value ? setReviewQueue(true) : setProModal(true))}
+              >
+                🔍 確認キュー{!isPro.value && " ⭐"}
+              </button>
+            )}
+            {FEATURES.proGating && (
+              <button
+                class={"btn" + (isPro.value ? "" : " primary")}
+                onClick={() => setProModal(true)}
+              >
+                ⭐ Pro
+              </button>
+            )}
+            {FEATURES.monetizeUI && hasDonation() && (
+              <a
+                class="btn"
+                href={MONETIZE.kofiUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                title="開発を支援する"
+              >
+                ☕ 支援
+              </a>
+            )}
             {f.kind === "person" && (
               <span class="hint">表示中: {personName(f.root)} — もう一度👁で解除</span>
             )}
@@ -345,10 +388,13 @@ export function App() {
       )}
 
       {!hasPhotos && phase.value === "idle" ? (
-        <Ingest
-          onFiles={ingest}
-          reconnect={reconnect ? { ...reconnect, onReconnect: doReconnect } : null}
-        />
+        <>
+          {FEATURES.landing && <Landing />}
+          <Ingest
+            onFiles={ingest}
+            reconnect={reconnect ? { ...reconnect, onReconnect: doReconnect } : null}
+          />
+        </>
       ) : (
         <>
           {reconnect && (
@@ -416,7 +462,11 @@ export function App() {
           {tagModal && (
             <TagModal photoIds={[...selection.value]} onClose={() => setTagModal(false)} />
           )}
+          {reviewQueue && <ReviewQueue onClose={() => setReviewQueue(false)} />}
         </>
+      )}
+      {proModal && (
+        <ProModal onClose={() => setProModal(false)} onImported={() => location.reload()} />
       )}
     </BrowserGate>
   );

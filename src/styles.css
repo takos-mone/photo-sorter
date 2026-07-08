@@ -642,6 +642,71 @@ h1.logo .sub {
   color: #fff;
 }
 
+/* ---- ランディング（商用版） ---- */
+.landing {
+  max-width: 860px;
+  margin: 36px auto 0;
+  padding: 0 20px;
+}
+.landing .hero {
+  text-align: center;
+}
+.landing .hero h2 {
+  font-size: 30px;
+  margin: 0 0 12px;
+  line-height: 1.5;
+}
+.landing .hero em {
+  font-style: normal;
+  color: var(--accent);
+}
+.landing .hero p {
+  color: var(--mut);
+  line-height: 1.9;
+  margin: 0 0 10px;
+}
+.privacy-badge {
+  display: inline-block;
+  background: rgba(105, 219, 124, 0.08);
+  border: 1px solid rgba(105, 219, 124, 0.35);
+  border-radius: 12px;
+  padding: 10px 16px;
+  color: var(--ink) !important;
+  font-size: 13px;
+}
+.landing .steps {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  margin: 26px 0 14px;
+}
+.landing .step {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 16px;
+}
+.landing .stepnum {
+  display: inline-grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #1a1208;
+  font-weight: 900;
+  margin-right: 8px;
+}
+.landing .step p {
+  margin: 8px 0 0;
+}
+.landing .support {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin: 18px 0 6px;
+}
+
 /* ---- ブラウザ非対応 ---- */
 .gate {
   max-width: 560px;
