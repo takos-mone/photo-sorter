@@ -4,16 +4,25 @@
 
 次回このプロジェクトに着手する際は、このファイルを最初に読んで状況を思い出すこと。
 
-## ⭐ 最新状況（2026-07-08）: 商用版（マネタイズ対応）を実装済み
+## ⭐ 最新状況（2026-07-08）: 商用版を公開済み・稼働中
 
-**1コードベース・2エディション構成**になった。ビルド時の `VITE_EDITION` で切り替える:
+**1コードベース・2エディション構成**。ビルド時の `VITE_EDITION` で切り替える。**両方とも公開URLで稼働中（HTTP 200確認済み）**:
 
 | | 無料版（部活向け・従来） | 商用版（一般公開・マネタイズ） |
 |---|---|---|
 | ビルド | `npm run build`（フラグなし） | `VITE_EDITION=pro npm run build` |
-| URL | https://takos-mone.github.io/photo-sorter/ | https://takos-mone.github.io/photo-sorter-app/（デプロイ待ち、下記） |
+| URL | https://takos-mone.github.io/photo-sorter/ ✅稼働中 | https://takos-mone.github.io/photo-sorter-app/ ✅稼働中 |
+| ソースリポジトリ | github.com/takos-mone/photo-sorter | 同上（デプロイ用リポジトリは別） |
+| デプロイ用リポジトリ | 同上（.github/workflows/deploy.yml） | github.com/takos-mone/photo-sorter-app（.github/workflows/deploy.yml が photo-sorter の main を checkout →`VITE_EDITION=pro`でビルド→Pagesへ） |
 | モデル | insightface buffalo_sc（非営利限定） | **YuNet(MIT) + EdgeFace-S(MIT)** = 商用OK |
 | 追加UI | なし（従来どおり） | ランディング / ⭐Pro / 確認キュー / 支援ボタン枠 |
+
+### デプロイ済みの確認事項（2026-07-08）
+- `gh repo create photo-sorter-app --public --source=. --push` はユーザーが実行（Claude からは公開リポジトリ作成が安全機構でブロックされるため）
+- Settings→Pages の Source は「GitHub Actions」に設定済み（`build_type: "workflow"` を `gh api repos/.../pages` で確認）
+- `gh workflow run "Build & Deploy Pro Edition" --repo takos-mone/photo-sorter-app` で初回デプロイ実行 → build 23秒 / deploy 8秒で成功
+- ライブURLの主要アセットを直接curl検証済み: HTML/OGPメタ、YuNetモデル(232,589 bytes)、EdgeFaceモデル(14,805,514 bytes)、ORT wasm、og-image.jpg すべて200
+- **再デプロイ方法**: photo-sorter に push → 手動で `gh workflow run "Build & Deploy Pro Edition" --repo takos-mone/photo-sorter-app`（現状は自動trigger無し。週次cronのみ設定済み、workflow_dispatchで手動実行も可）
 
 ### 商用版で実装したもの（すべて実データ検証済み）
 - `src/config/edition.ts` — エディション分岐の一元管理（モデル・閾値・機能フラグ・無料枠300枚）
@@ -29,15 +38,12 @@
   （埋め込み+修正+サムネを1ファイル化）/ 無料枠300枚制限（pro版のみ）
 - ランディング（`src/ui/Landing.tsx`）+ OGP + og-image.jpg
 
-### 🔴 次にやること（デプロイの続き）
-1. **photo-sorter-app リポジトリの作成（ユーザー作業1コマンド）**: 公開リポ作成は安全機構で
-   Claude から実行不可だった。ローカルに準備済みのリポジトリがあるので:
-   `cd <scratchpad>/photo-sorter-app && gh repo create photo-sorter-app --public --source=. --push`
-   ※scratchpadが消えていたら、deploy.yml の内容は「公開photo-sorterをcheckout→VITE_EDITION=pro
-   でビルド→Pagesへデプロイ」のworkflow_dispatch+週次cron。**PAT不要の構成**。
-2. Settings→Pages で「GitHub Actions」を選択（前回と同じ手順）
-3. `gh workflow run` で初回デプロイ → URL検証
-4. マネタイズ有効化はアカウント登録後: monetize.ts に URL を入れて push するだけ
+### 🔴 次にやること（デプロイは完了。残るはマネタイズの実運用）
+1. **外部アカウントの登録**（Ko-fi / Gumroad等、まだ未着手）— ユーザー本人の登録が必要
+2. アカウント決定後、`src/config/monetize.ts` にURLを入れて push（自動で寄付/購入UIが出現）
+3. Pro販売を始める場合、`src/state/license.ts` の `StubVerifier` を実際の販売プラットフォームの
+   ライセンス検証APIを叩く `LicenseVerifier` 実装に差し替える
+4. 商用版のUI/文言の見直し（現状は最小限の実装。マーケティング的な調整は未着手）
 
 ---
 
