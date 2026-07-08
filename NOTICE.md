@@ -18,3 +18,16 @@
 ## ONNX Runtime Web
 
 推論エンジンとして [ONNX Runtime Web](https://onnxruntime.ai/)（MIT ライセンス）を使用しています。
+
+---
+
+## 商用版（photo-sorter-app）のモデルについて
+
+一般公開版（`VITE_EDITION=pro` ビルド、photo-sorter-app リポジトリでデプロイ）は
+insightface のモデルを**一切使用しません**。代わりに以下の商用利用可能なモデルを使用します:
+
+- **YuNet**（顔検出）— MIT License（OpenCV Model Zoo）。`public/models/pro/LICENSE.yunet.txt`
+- **EdgeFace-S**（顔認識埋め込み）— MIT License（yakhyo/edgeface-onnx、原論文: EdgeFace, IJCB 2023）。`public/models/pro/LICENSE.edgeface.txt`
+
+無料版（本リポジトリの GitHub Pages）は従来どおり insightface buffalo_sc を使用し、
+非営利のまま維持されます（広告・課金なし）。

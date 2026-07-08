@@ -1,8 +1,43 @@
 # Photo Sorter — プロジェクトコンテキスト
 
-最終更新: 2026-07-03
+最終更新: 2026-07-08
 
 次回このプロジェクトに着手する際は、このファイルを最初に読んで状況を思い出すこと。
+
+## ⭐ 最新状況（2026-07-08）: 商用版（マネタイズ対応）を実装済み
+
+**1コードベース・2エディション構成**になった。ビルド時の `VITE_EDITION` で切り替える:
+
+| | 無料版（部活向け・従来） | 商用版（一般公開・マネタイズ） |
+|---|---|---|
+| ビルド | `npm run build`（フラグなし） | `VITE_EDITION=pro npm run build` |
+| URL | https://takos-mone.github.io/photo-sorter/ | https://takos-mone.github.io/photo-sorter-app/（デプロイ待ち、下記） |
+| モデル | insightface buffalo_sc（非営利限定） | **YuNet(MIT) + EdgeFace-S(MIT)** = 商用OK |
+| 追加UI | なし（従来どおり） | ランディング / ⭐Pro / 確認キュー / 支援ボタン枠 |
+
+### 商用版で実装したもの（すべて実データ検証済み）
+- `src/config/edition.ts` — エディション分岐の一元管理（モデル・閾値・機能フラグ・無料枠300枚）
+- `src/pipeline/yunet.ts` — YuNet検出器（MIT, 233KB）。クラスタ閾値は pro 用に再調整済み
+  （thr0.45/merge0.50/minScore0.8/**minBoxW0.025** — 極小顔が巨大クラスタに癒着する問題を発見し
+  サイズフィルタで解決。クラスタ内類似0.461 vs クラスタ間0.192で分離良好）
+- EdgeFace-S 埋め込み（MIT, 14.8MB）— ArcFaceと同一前処理なので embedder 実装は共用。
+  **処理速度は旧構成の約4.5倍**（56枚: 33秒→7.3秒/WebGPU）
+- `src/config/monetize.ts` — **Ko-fi/Gumroad等のURLをここに入れるだけで寄付/購入UIが出現**（空=非表示）
+- `src/state/license.ts` — Proライセンス（スタブ検証: PSPRO-形式）。販売開始時に
+  Gumroad/LemonSqueezy の LicenseVerifier アダプタ実装へ差し替える
+- Pro機能: **確認キュー**（prototype.ts接続、Y/N高速トリアージ）/ **.psortエクスポート・インポート**
+  （埋め込み+修正+サムネを1ファイル化）/ 無料枠300枚制限（pro版のみ）
+- ランディング（`src/ui/Landing.tsx`）+ OGP + og-image.jpg
+
+### 🔴 次にやること（デプロイの続き）
+1. **photo-sorter-app リポジトリの作成（ユーザー作業1コマンド）**: 公開リポ作成は安全機構で
+   Claude から実行不可だった。ローカルに準備済みのリポジトリがあるので:
+   `cd <scratchpad>/photo-sorter-app && gh repo create photo-sorter-app --public --source=. --push`
+   ※scratchpadが消えていたら、deploy.yml の内容は「公開photo-sorterをcheckout→VITE_EDITION=pro
+   でビルド→Pagesへデプロイ」のworkflow_dispatch+週次cron。**PAT不要の構成**。
+2. Settings→Pages で「GitHub Actions」を選択（前回と同じ手順）
+3. `gh workflow run` で初回デプロイ → URL検証
+4. マネタイズ有効化はアカウント登録後: monetize.ts に URL を入れて push するだけ
 
 ---
 
